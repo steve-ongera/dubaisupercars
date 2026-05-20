@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled]     = useState(false);
+  const [menuOpen, setMenuOpen]     = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery]           = useState("");
   const searchRef = useRef(null);
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -19,6 +19,12 @@ export default function Navbar() {
     if (searchOpen) searchRef.current?.focus();
   }, [searchOpen]);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [menuOpen]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -29,58 +35,96 @@ export default function Navbar() {
   };
 
   const navLinks = [
-    { to: "/cars", label: "Inventory" },
-    { to: "/cars?is_featured=true", label: "Featured" },
-    { to: "/about", label: "About" },
+    { to: "/cars",                  label: "Inventory" },
+    { to: "/cars?is_featured=true", label: "Featured"  },
+    { to: "/about",                 label: "About"      },
   ];
+
+  const waNumber = (import.meta.env.VITE_WHATSAPP_NUMBER || "+971500000000").replace("+", "");
 
   return (
     <>
-      <nav className={`navbar${scrolled ? " navbar--scrolled" : ""}${menuOpen ? " navbar--open" : ""}`}>
+      <nav
+        className={[
+          "navbar",
+          scrolled  ? "navbar--scrolled" : "",
+          menuOpen  ? "navbar--open"     : "",
+        ].filter(Boolean).join(" ")}
+      >
         <div className="navbar__inner">
-          {/* Logo */}
+
+          {/* ── Logo ─────────────────────────────── */}
           <Link to="/" className="navbar__logo" onClick={() => setMenuOpen(false)}>
-            <span className="navbar__logo-icon">
-              <i className="bi bi-hexagon-fill" />
-            </span>
+            {/* SVG hex mark */}
+            <svg
+              className="navbar__logo-mark"
+              viewBox="0 0 36 36"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M18 2L33 10.5V25.5L18 34L3 25.5V10.5L18 2Z"
+                stroke="var(--color-gold)"
+                strokeWidth="1.5"
+                fill="none"
+              />
+              <path
+                d="M18 8L27 13V23L18 28L9 23V13L18 8Z"
+                fill="var(--color-gold)"
+                opacity="0.15"
+              />
+              <text
+                x="18"
+                y="22"
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="700"
+                fill="var(--color-gold)"
+                fontFamily="var(--font-display)"
+              >
+                D
+              </text>
+            </svg>
             <span className="navbar__logo-text">
               Dubai<span>SuperCars</span>
             </span>
           </Link>
 
-          {/* Desktop links */}
-          <ul className="navbar__links">
+          {/* ── Desktop nav links ────────────────── */}
+          <nav className="navbar__nav" aria-label="Primary">
             {navLinks.map((l) => (
-              <li key={l.to}>
-                <NavLink
-                  to={l.to}
-                  className={({ isActive }) =>
-                    "navbar__link" + (isActive ? " navbar__link--active" : "")
-                  }
-                >
-                  {l.label}
-                </NavLink>
-              </li>
+              <NavLink
+                key={l.to}
+                to={l.to}
+                className={({ isActive }) =>
+                  "navbar__link" + (isActive ? " navbar__link--active" : "")
+                }
+              >
+                {l.label}
+              </NavLink>
             ))}
-          </ul>
+          </nav>
 
-          {/* Actions */}
+          {/* ── Actions ──────────────────────────── */}
           <div className="navbar__actions">
             {/* Search toggle */}
             <button
-              className="navbar__icon-btn"
+              className="navbar__search-btn"
               onClick={() => setSearchOpen((p) => !p)}
-              aria-label="Search"
+              aria-label={searchOpen ? "Close search" : "Open search"}
+              aria-expanded={searchOpen}
             >
               <i className={`bi bi-${searchOpen ? "x-lg" : "search"}`} />
             </button>
 
-            {/* WhatsApp CTA */}
+            {/* WhatsApp — hidden on mobile (shown in drawer) */}
             <a
-              href={`https://wa.me/${(import.meta.env.VITE_WHATSAPP_NUMBER || "+971500000000").replace("+", "")}`}
+              href={`https://wa.me/${waNumber}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="navbar__whatsapp"
+              className="navbar__whatsapp desktop-only"
+              aria-label="Contact on WhatsApp"
             >
               <i className="bi bi-whatsapp" />
               <span>WhatsApp</span>
@@ -88,72 +132,98 @@ export default function Navbar() {
 
             {/* Hamburger */}
             <button
-              className="navbar__hamburger"
+              className={`navbar__hamburger${menuOpen ? " is-open" : ""}`}
               onClick={() => setMenuOpen((p) => !p)}
-              aria-label="Toggle menu"
+              aria-label="Toggle navigation menu"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-drawer"
             >
-              <i className={`bi bi-${menuOpen ? "x-lg" : "list"}`} />
+              <span />
+              <span />
+              <span />
             </button>
           </div>
         </div>
 
-        {/* Search bar */}
-        <div className={`navbar__search${searchOpen ? " navbar__search--open" : ""}`}>
-          <form onSubmit={handleSearch} className="navbar__search-form">
-            <i className="bi bi-search" />
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Search by make, model, color…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="navbar__search-input"
-            />
-            <button type="submit" className="navbar__search-btn">
-              Search
-            </button>
-          </form>
-        </div>
+        {/* ── Search bar (slides down) ──────────── */}
+        {searchOpen && (
+          <div className="navbar__search-panel" role="search">
+            <div className="container">
+              <form onSubmit={handleSearch} className="search-bar">
+                <span className="search-bar__icon" aria-hidden="true">
+                  <i className="bi bi-search" />
+                </span>
+                <input
+                  ref={searchRef}
+                  type="search"
+                  placeholder="Search by make, model, color…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className="search-bar__input"
+                  aria-label="Search cars"
+                />
+                <button type="submit" className="btn btn--primary btn--sm">
+                  Search
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
 
-        {/* Mobile menu */}
-        <div className={`navbar__mobile${menuOpen ? " navbar__mobile--open" : ""}`}>
-          <ul className="navbar__mobile-links">
-            {navLinks.map((l) => (
-              <li key={l.to}>
-                <NavLink
-                  to={l.to}
-                  className="navbar__mobile-link"
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {l.label}
-                </NavLink>
-              </li>
-            ))}
-            <li>
-              <Link
-                to="/login"
-                className="navbar__mobile-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                Login
-              </Link>
-            </li>
-          </ul>
+        {/* ── Mobile drawer ─────────────────────── */}
+        <div
+          id="mobile-drawer"
+          className={`navbar__drawer${menuOpen ? " is-open" : ""}`}
+          aria-hidden={!menuOpen}
+        >
+          {navLinks.map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              className="navbar__drawer-link"
+              onClick={() => setMenuOpen(false)}
+            >
+              {l.label}
+            </NavLink>
+          ))}
+          <NavLink
+            to="/login"
+            className="navbar__drawer-link"
+            onClick={() => setMenuOpen(false)}
+          >
+            Login
+          </NavLink>
+
           <a
-            href={`https://wa.me/${(import.meta.env.VITE_WHATSAPP_NUMBER || "+971500000000").replace("+", "")}`}
+            href={`https://wa.me/${waNumber}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="navbar__mobile-whatsapp"
+            className="btn btn--whatsapp btn--block"
+            style={{ marginTop: "auto" }}
           >
             <i className="bi bi-whatsapp" /> Contact on WhatsApp
           </a>
         </div>
       </nav>
 
-      {/* Overlay */}
+      {/* Dim overlay behind mobile drawer */}
       {menuOpen && (
-        <div className="navbar__overlay" onClick={() => setMenuOpen(false)} />
+        <div
+          className="navbar__overlay"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 998,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(2px)",
+          }}
+        />
       )}
+
+      {/* Spacer so page content isn't hidden under fixed bar */}
+      <div style={{ height: "var(--navbar-height)" }} aria-hidden="true" />
     </>
   );
 }
