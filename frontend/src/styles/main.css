@@ -2785,3 +2785,192 @@ hr {
 }
 
 /* ── End of main.css ─────────────────────────────────────── */
+
+/*
+  additions.css  —  paste at the BOTTOM of your existing main.css
+  Covers the patterns used in the updated Navbar, Footer, and PaymentModal
+  that weren't fully specified in the original stylesheet.
+*/
+
+/* ── Navbar: search panel ─────────────────────────────────────── */
+.navbar__search-panel {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg-2);
+  padding: var(--space-4) 0;
+  animation: revealUp 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Navbar: icon button (search toggle) ──────────────────────── */
+.navbar__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.navbar__icon-btn:hover {
+  background: var(--color-gold-muted);
+  border-color: var(--color-gold-dark);
+  color: var(--color-gold);
+}
+
+/* Alias — PaymentModal uses navbar__search-btn as the icon button */
+.navbar__search-btn {
+  composes: navbar__icon-btn; /* fallback: same styles below */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.navbar__search-btn:hover {
+  background: var(--color-gold-muted);
+  border-color: var(--color-gold-dark);
+  color: var(--color-gold);
+}
+
+/* ── Footer: brand logo row ───────────────────────────────────── */
+.footer__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semi);
+  color: var(--color-off-white);
+  letter-spacing: var(--ls-wide);
+}
+
+.footer__logo span { color: var(--color-gold); }
+
+/* ── Footer: column link list ─────────────────────────────────── */
+.footer__col-links {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.footer__col-links a,
+.footer__col-links li {
+  font-size: var(--fs-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color var(--transition-fast), padding-left var(--transition-fast);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.footer__col-links a:hover {
+  color: var(--color-off-white);
+  padding-left: var(--space-2);
+}
+
+/* ── Footer: payment badge variants ──────────────────────────── */
+.footer__payment-badge--binance {
+  border-color: rgba(240, 185, 11, 0.35);
+  color: #F0B90B;
+}
+
+.footer__payment-badge--mpesa {
+  border-color: rgba(76, 175, 80, 0.35);
+  color: #4CAF50;
+}
+
+.footer__payment-badge--wa {
+  border-color: rgba(37, 211, 102, 0.35);
+  color: #25d366;
+}
+
+/* ── Footer: payments row ─────────────────────────────────────── */
+.footer__payments {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--color-border);
+  margin-bottom: var(--space-6);
+}
+
+.footer__payments-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--ls-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.footer__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.footer__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
+  color: var(--color-text-muted);
+  font-weight: var(--fw-medium);
+}
+
+.footer__badge--binance { border-color: rgba(240,185,11,0.3); color: #F0B90B; }
+.footer__badge--mpesa   { border-color: rgba(76,175,80,0.3);  color: #4CAF50; }
+.footer__badge--wa      { border-color: rgba(37,211,102,0.3); color: #25d366; }
+
+/* ── Modal: overlay click-to-close cursor ─────────────────────── */
+.modal-overlay { cursor: pointer; }
+.modal         { cursor: default; }
+
+/* ── Modal: required asterisk ─────────────────────────────────── */
+.required { color: var(--color-crimson-light); }
+
+/* ── Global spin keyframe (used by Spinner component) ─────────── */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Responsive: footer on mobile ────────────────────────────── */
+@media (max-width: 768px) {
+  .footer__top {
+    grid-template-columns: 1fr;
+  }
+
+  .footer__payments {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Responsive: navbar search panel ─────────────────────────── */
+@media (max-width: 768px) {
+  .navbar__search-panel {
+    padding: var(--space-3) 0;
+  }
+
+  .search-bar {
+    max-width: 100%;
+  }
+}
