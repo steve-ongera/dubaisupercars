@@ -9,11 +9,11 @@ const FUEL_TYPES = ["petrol", "diesel", "hybrid", "electric"];
 const TRANSMISSIONS = ["automatic", "manual", "semi_auto"];
 const ORDERINGS = [
   { value: "-created_at", label: "Newest First" },
-  { value: "created_at", label: "Oldest First" },
-  { value: "price", label: "Price: Low to High" },
-  { value: "-price", label: "Price: High to Low" },
+  { value: "created_at",  label: "Oldest First" },
+  { value: "price",       label: "Price: Low to High" },
+  { value: "-price",      label: "Price: High to Low" },
   { value: "-horsepower", label: "Most Powerful" },
-  { value: "mileage", label: "Lowest Mileage" },
+  { value: "mileage",     label: "Lowest Mileage" },
 ];
 
 function useDebounce(value, delay = 400) {
@@ -27,33 +27,30 @@ function useDebounce(value, delay = 400) {
 
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [cars, setCars] = useState([]);
-  const [makes, setMakes] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [cars, setCars]           = useState([]);
+  const [makes, setMakes]         = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage]           = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Filter state — initialise from URL params
   const [filters, setFilters] = useState({
-    search: searchParams.get("search") || "",
-    make: searchParams.get("make") || "",
-    body_type: searchParams.get("body_type") || "",
-    fuel_type: searchParams.get("fuel_type") || "",
+    search:       searchParams.get("search")       || "",
+    make:         searchParams.get("make")         || "",
+    body_type:    searchParams.get("body_type")    || "",
+    fuel_type:    searchParams.get("fuel_type")    || "",
     transmission: searchParams.get("transmission") || "",
-    price_min: searchParams.get("price_min") || "",
-    price_max: searchParams.get("price_max") || "",
-    year_min: searchParams.get("year_min") || "",
-    year_max: searchParams.get("year_max") || "",
-    hp_min: searchParams.get("hp_min") || "",
-    is_featured: searchParams.get("is_featured") || "",
-    ordering: searchParams.get("ordering") || "-created_at",
+    price_min:    searchParams.get("price_min")    || "",
+    price_max:    searchParams.get("price_max")    || "",
+    year_min:     searchParams.get("year_min")     || "",
+    year_max:     searchParams.get("year_max")     || "",
+    hp_min:       searchParams.get("hp_min")       || "",
+    is_featured:  searchParams.get("is_featured")  || "",
+    ordering:     searchParams.get("ordering")     || "-created_at",
   });
 
   const debouncedSearch = useDebounce(filters.search);
 
-  // Sync active filter count badge
   const activeFilterCount = Object.entries(filters).filter(
     ([k, v]) => v && k !== "ordering" && k !== "search"
   ).length;
@@ -61,10 +58,7 @@ export default function ProductsPage() {
   const fetchCars = useCallback(async () => {
     setLoading(true);
     const params = { page };
-    Object.entries(filters).forEach(([k, v]) => {
-      if (v) params[k] = v;
-    });
-    // Use debounced search
+    Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
     if (debouncedSearch) params.search = debouncedSearch;
     else delete params.search;
 
@@ -87,7 +81,6 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchCars();
-    // Sync URL
     const p = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => { if (v) p.set(k, v); });
     if (page > 1) p.set("page", page);
@@ -95,11 +88,13 @@ export default function ProductsPage() {
   }, [fetchCars]);
 
   useEffect(() => {
-    getMakes().then((d) => setMakes(Array.isArray(d) ? d : d.results || [])).catch(() => {});
+    getMakes()
+      .then((d) => setMakes(Array.isArray(d) ? d : d.results || []))
+      .catch(() => {});
   }, []);
 
   const setFilter = (key, value) => {
-    setFilters((p) => ({ ...p, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
     setPage(1);
   };
 
@@ -113,55 +108,90 @@ export default function ProductsPage() {
     setPage(1);
   };
 
+  // Smart pagination: show up to 7 page numbers centred on current page
+  const pageNumbers = (() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const start = Math.max(1, Math.min(page - 3, totalPages - 6));
+    return Array.from({ length: 7 }, (_, i) => start + i);
+  })();
+
   return (
     <>
       <Helmet>
         <title>Supercar Inventory — DubaiSuperCars</title>
-        <meta name="description" content="Browse our full inventory of exclusive supercars available for purchase. Filter by brand, price, specs and more." />
+        <meta
+          name="description"
+          content="Browse our full inventory of exclusive supercars available for purchase. Filter by brand, price, specs and more."
+        />
       </Helmet>
 
-      <div className="products-page">
-        {/* ── Page Header ─────────────────────────────────────────────── */}
-        <div className="products-page__header">
-          <div className="products-page__header-inner">
-            <nav className="breadcrumb">
-              <Link to="/">Home</Link>
-              <i className="bi bi-chevron-right" />
-              <span>Inventory</span>
-            </nav>
-            <h1 className="products-page__title">
-              {filters.make
-                ? makes.find((m) => m.slug === filters.make)?.name || filters.make
-                : "Full Inventory"}
-            </h1>
-            <p className="products-page__count">
-              {loading ? "Loading…" : `${totalCount.toLocaleString()} vehicle${totalCount !== 1 ? "s" : ""} available`}
+      {/* ── Page header ──────────────────────────────────────────────── */}
+      <div
+        className="section section--sm"
+        style={{ paddingTop: "calc(var(--navbar-height) + var(--space-8))", paddingBottom: 0 }}
+      >
+        <div className="container">
+          {/* Breadcrumb */}
+          <nav className="breadcrumb mb-6">
+            <span className="breadcrumb__item">
+              <Link to="/" className="breadcrumb__link">Home</Link>
+              <i className="bi bi-chevron-right breadcrumb__sep" />
+            </span>
+            <span className="breadcrumb__item">
+              <span className="breadcrumb__current">Inventory</span>
+            </span>
+          </nav>
+
+          {/* Title row */}
+          <div className="flex items-end justify-between gap-6 flex-wrap">
+            <div>
+              <span className="section-label">
+                <i className="bi bi-collection" style={{ marginRight: 6 }} />
+                Our Fleet
+              </span>
+              <h1 className="section-title" style={{ fontSize: "var(--fs-3xl)" }}>
+                {filters.make
+                  ? makes.find((m) => m.slug === filters.make)?.name || filters.make
+                  : "Full Inventory"}
+              </h1>
+            </div>
+            <p className="products-count" style={{ paddingBottom: "var(--space-2)" }}>
+              {loading
+                ? "Loading…"
+                : <><strong>{totalCount.toLocaleString()}</strong> vehicle{totalCount !== 1 ? "s" : ""} available</>
+              }
             </p>
           </div>
         </div>
+      </div>
 
-        <div className="products-page__body">
-          {/* ── Sidebar ──────────────────────────────────────────────── */}
-          <aside className={`products-sidebar${sidebarOpen ? " products-sidebar--open" : ""}`}>
-            <div className="products-sidebar__head">
-              <h2>Filters</h2>
+      {/* ── Main layout: sidebar + grid ──────────────────────────────── */}
+      <div className="container">
+        <div className="products-layout">
+
+          {/* ── Filter sidebar ─────────────────────────────────────── */}
+          <aside className="filter-sidebar">
+
+            {/* Sidebar header */}
+            <div className="filter-sidebar__title">
+              <span>Filters</span>
               {activeFilterCount > 0 && (
-                <button className="products-sidebar__clear" onClick={clearFilters}>
+                <button className="filter-sidebar__reset" onClick={clearFilters}>
                   Clear all ({activeFilterCount})
                 </button>
               )}
-              <button className="products-sidebar__close" onClick={() => setSidebarOpen(false)}>
-                <i className="bi bi-x-lg" />
-              </button>
             </div>
 
             {/* Search */}
             <div className="filter-group">
-              <label className="filter-label">Search</label>
-              <div className="filter-search">
-                <i className="bi bi-search" />
+              <span className="filter-group__label">Search</span>
+              <div className="search-bar" style={{ borderRadius: "var(--radius-md)" }}>
+                <span className="search-bar__icon">
+                  <i className="bi bi-search" />
+                </span>
                 <input
                   type="text"
+                  className="search-bar__input"
                   placeholder="Make, model, color…"
                   value={filters.search}
                   onChange={(e) => setFilter("search", e.target.value)}
@@ -169,10 +199,14 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            {/* Make */}
+            {/* Brand */}
             <div className="filter-group">
-              <label className="filter-label">Brand</label>
-              <select value={filters.make} onChange={(e) => setFilter("make", e.target.value)}>
+              <span className="filter-group__label">Brand</span>
+              <select
+                className="form-select"
+                value={filters.make}
+                onChange={(e) => setFilter("make", e.target.value)}
+              >
                 <option value="">All Brands</option>
                 {makes.map((m) => (
                   <option key={m.id} value={m.slug}>{m.name}</option>
@@ -182,85 +216,96 @@ export default function ProductsPage() {
 
             {/* Body type */}
             <div className="filter-group">
-              <label className="filter-label">Body Type</label>
-              <div className="filter-pills">
+              <span className="filter-group__label">Body Type</span>
+              <div className="filter-options">
                 {BODY_TYPES.map((b) => (
-                  <button
+                  <div
                     key={b}
-                    className={`filter-pill${filters.body_type === b ? " filter-pill--active" : ""}`}
+                    className={`filter-option${filters.body_type === b ? " is-active" : ""}`}
                     onClick={() => setFilter("body_type", filters.body_type === b ? "" : b)}
                   >
                     {b.charAt(0).toUpperCase() + b.slice(1)}
-                  </button>
+                    {filters.body_type === b && (
+                      <i className="bi bi-check2" style={{ color: "var(--color-gold)" }} />
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
 
             {/* Fuel type */}
             <div className="filter-group">
-              <label className="filter-label">Fuel Type</label>
-              <div className="filter-pills">
+              <span className="filter-group__label">Fuel Type</span>
+              <div className="flex flex-wrap gap-2">
                 {FUEL_TYPES.map((f) => (
-                  <button
+                  <span
                     key={f}
-                    className={`filter-pill${filters.fuel_type === f ? " filter-pill--active" : ""}`}
+                    className={`tag${filters.fuel_type === f ? " is-active" : ""}`}
                     onClick={() => setFilter("fuel_type", filters.fuel_type === f ? "" : f)}
                   >
                     {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
+                  </span>
                 ))}
               </div>
             </div>
 
             {/* Transmission */}
             <div className="filter-group">
-              <label className="filter-label">Transmission</label>
-              <div className="filter-pills">
+              <span className="filter-group__label">Transmission</span>
+              <div className="flex flex-wrap gap-2">
                 {TRANSMISSIONS.map((t) => (
-                  <button
+                  <span
                     key={t}
-                    className={`filter-pill${filters.transmission === t ? " filter-pill--active" : ""}`}
+                    className={`tag${filters.transmission === t ? " is-active" : ""}`}
                     onClick={() => setFilter("transmission", filters.transmission === t ? "" : t)}
                   >
                     {t === "semi_auto" ? "Semi-Auto" : t.charAt(0).toUpperCase() + t.slice(1)}
-                  </button>
+                  </span>
                 ))}
               </div>
             </div>
 
             {/* Price range */}
             <div className="filter-group">
-              <label className="filter-label">Price Range (AED)</label>
-              <div className="filter-range">
+              <span className="filter-group__label">Price Range (AED)</span>
+              <div className="flex gap-3 items-center">
                 <input
                   type="number"
+                  className="form-input"
                   placeholder="Min"
                   value={filters.price_min}
                   onChange={(e) => setFilter("price_min", e.target.value)}
                 />
-                <span>–</span>
+                <span className="text-muted">–</span>
                 <input
                   type="number"
+                  className="form-input"
                   placeholder="Max"
                   value={filters.price_max}
                   onChange={(e) => setFilter("price_max", e.target.value)}
                 />
               </div>
+              <div className="price-range__labels">
+                <span>{filters.price_min ? `AED ${Number(filters.price_min).toLocaleString()}` : "Any"}</span>
+                <span>{filters.price_max ? `AED ${Number(filters.price_max).toLocaleString()}` : "Any"}</span>
+              </div>
             </div>
 
             {/* Year range */}
             <div className="filter-group">
-              <label className="filter-label">Year</label>
-              <div className="filter-range">
+              <span className="filter-group__label">Year</span>
+              <div className="flex gap-3 items-center">
                 <input
                   type="number"
+                  className="form-input"
                   placeholder="From"
                   value={filters.year_min}
                   onChange={(e) => setFilter("year_min", e.target.value)}
                 />
-                <span>–</span>
+                <span className="text-muted">–</span>
                 <input
                   type="number"
+                  className="form-input"
                   placeholder="To"
                   value={filters.year_max}
                   onChange={(e) => setFilter("year_max", e.target.value)}
@@ -268,57 +313,62 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            {/* Horsepower min */}
+            {/* Min horsepower */}
             <div className="filter-group">
-              <label className="filter-label">Min Horsepower</label>
+              <span className="filter-group__label">Min Horsepower</span>
               <input
                 type="number"
+                className="form-input"
                 placeholder="e.g. 500"
                 value={filters.hp_min}
                 onChange={(e) => setFilter("hp_min", e.target.value)}
-                className="filter-input"
               />
             </div>
 
             {/* Featured toggle */}
-            <div className="filter-group filter-group--toggle">
-              <label className="filter-toggle">
+            <div className="filter-group" style={{ borderBottom: "none", marginBottom: 0, paddingBottom: 0 }}>
+              <label className="checkbox-group" style={{ cursor: "pointer" }}>
                 <input
                   type="checkbox"
                   checked={filters.is_featured === "true"}
                   onChange={(e) => setFilter("is_featured", e.target.checked ? "true" : "")}
                 />
-                <span className="filter-toggle__track" />
-                Featured only
+                <span className="checkbox-mark" />
+                <span className="filter-group__label" style={{ margin: 0 }}>Featured only</span>
               </label>
             </div>
+
           </aside>
 
-          {/* Sidebar overlay (mobile) */}
-          {sidebarOpen && (
-            <div className="products-overlay" onClick={() => setSidebarOpen(false)} />
-          )}
-
-          {/* ── Main content ─────────────────────────────────────────── */}
+          {/* ── Products main ─────────────────────────────────────── */}
           <div className="products-main">
+
             {/* Toolbar */}
             <div className="products-toolbar">
-              <button
-                className="products-toolbar__filter-btn"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <i className="bi bi-sliders" /> Filters
+              <div className="products-count">
+                {loading
+                  ? "Loading…"
+                  : <><strong>{totalCount.toLocaleString()}</strong> vehicle{totalCount !== 1 ? "s" : ""}</>
+                }
                 {activeFilterCount > 0 && (
-                  <span className="products-toolbar__badge">{activeFilterCount}</span>
+                  <button
+                    className="tag tag--gold"
+                    onClick={clearFilters}
+                    style={{ marginLeft: "var(--space-3)" }}
+                  >
+                    <i className="bi bi-x-circle" style={{ marginRight: 4 }} />
+                    Clear {activeFilterCount} filter{activeFilterCount !== 1 ? "s" : ""}
+                  </button>
                 )}
-              </button>
+              </div>
 
-              <div className="products-toolbar__right">
-                <label className="products-toolbar__sort-label">Sort by</label>
+              <div className="products-sort">
+                <span>Sort by</span>
                 <select
+                  className="form-select"
+                  style={{ width: "auto", padding: "0.5rem 2.5rem 0.5rem 0.75rem" }}
                   value={filters.ordering}
                   onChange={(e) => setFilter("ordering", e.target.value)}
-                  className="products-toolbar__sort"
                 >
                   {ORDERINGS.map((o) => (
                     <option key={o.value} value={o.value}>{o.label}</option>
@@ -329,59 +379,119 @@ export default function ProductsPage() {
 
             {/* Active filter chips */}
             {activeFilterCount > 0 && (
-              <div className="filter-chips">
+              <div className="flex flex-wrap gap-2 mb-6">
                 {filters.make && (
-                  <span className="filter-chip">
+                  <span className="tag is-active">
                     Brand: {makes.find((m) => m.slug === filters.make)?.name || filters.make}
-                    <button onClick={() => setFilter("make", "")}><i className="bi bi-x" /></button>
+                    <button
+                      onClick={() => setFilter("make", "")}
+                      style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}
+                    >
+                      <i className="bi bi-x" />
+                    </button>
                   </span>
                 )}
                 {filters.body_type && (
-                  <span className="filter-chip">
-                    {filters.body_type}
-                    <button onClick={() => setFilter("body_type", "")}><i className="bi bi-x" /></button>
+                  <span className="tag is-active">
+                    {filters.body_type.charAt(0).toUpperCase() + filters.body_type.slice(1)}
+                    <button onClick={() => setFilter("body_type", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
                   </span>
                 )}
                 {filters.fuel_type && (
-                  <span className="filter-chip">
-                    {filters.fuel_type}
-                    <button onClick={() => setFilter("fuel_type", "")}><i className="bi bi-x" /></button>
+                  <span className="tag is-active">
+                    {filters.fuel_type.charAt(0).toUpperCase() + filters.fuel_type.slice(1)}
+                    <button onClick={() => setFilter("fuel_type", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
+                  </span>
+                )}
+                {filters.transmission && (
+                  <span className="tag is-active">
+                    {filters.transmission === "semi_auto" ? "Semi-Auto" : filters.transmission.charAt(0).toUpperCase() + filters.transmission.slice(1)}
+                    <button onClick={() => setFilter("transmission", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
                   </span>
                 )}
                 {filters.price_min && (
-                  <span className="filter-chip">
+                  <span className="tag is-active">
                     Min AED {Number(filters.price_min).toLocaleString()}
-                    <button onClick={() => setFilter("price_min", "")}><i className="bi bi-x" /></button>
+                    <button onClick={() => setFilter("price_min", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
                   </span>
                 )}
                 {filters.price_max && (
-                  <span className="filter-chip">
+                  <span className="tag is-active">
                     Max AED {Number(filters.price_max).toLocaleString()}
-                    <button onClick={() => setFilter("price_max", "")}><i className="bi bi-x" /></button>
+                    <button onClick={() => setFilter("price_max", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
+                  </span>
+                )}
+                {filters.year_min && (
+                  <span className="tag is-active">
+                    From {filters.year_min}
+                    <button onClick={() => setFilter("year_min", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
+                  </span>
+                )}
+                {filters.year_max && (
+                  <span className="tag is-active">
+                    To {filters.year_max}
+                    <button onClick={() => setFilter("year_max", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
+                  </span>
+                )}
+                {filters.hp_min && (
+                  <span className="tag is-active">
+                    {Number(filters.hp_min).toLocaleString()}+ hp
+                    <button onClick={() => setFilter("hp_min", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
                   </span>
                 )}
                 {filters.is_featured === "true" && (
-                  <span className="filter-chip">
+                  <span className="tag is-active">
+                    <i className="bi bi-star-fill" style={{ marginRight: 4 }} />
                     Featured
-                    <button onClick={() => setFilter("is_featured", "")}><i className="bi bi-x" /></button>
+                    <button onClick={() => setFilter("is_featured", "")} style={{ background: "none", border: "none", padding: "0 0 0 4px", cursor: "pointer", color: "inherit" }}>
+                      <i className="bi bi-x" />
+                    </button>
                   </span>
                 )}
               </div>
             )}
 
-            {/* Grid */}
+            {/* ── Car grid ──────────────────────────────────────────── */}
             {loading ? (
               <div className="cars-grid">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="car-card car-card--skeleton" />
+                  <div key={i} className="skeleton skeleton--card" />
                 ))}
               </div>
             ) : cars.length === 0 ? (
-              <div className="empty-state">
-                <i className="bi bi-search empty-state__icon" />
-                <h3>No vehicles found</h3>
-                <p>Try adjusting your filters or search term.</p>
-                <button className="btn btn--gold" onClick={clearFilters}>Clear Filters</button>
+              <div
+                className="text-center"
+                style={{ padding: "var(--space-20) 0", display: "flex", flexDirection: "column", alignItems: "center", gap: "var(--space-5)" }}
+              >
+                <i
+                  className="bi bi-search"
+                  style={{ fontSize: "3rem", color: "var(--color-text-faint)" }}
+                />
+                <div>
+                  <h3 style={{ color: "var(--color-off-white)", marginBottom: "var(--space-2)" }}>
+                    No vehicles found
+                  </h3>
+                  <p className="text-muted">Try adjusting your filters or search term.</p>
+                </div>
+                <button className="btn btn--outline-gold" onClick={clearFilters}>
+                  <i className="bi bi-arrow-counterclockwise" /> Clear Filters
+                </button>
               </div>
             ) : (
               <div className="cars-grid">
@@ -391,7 +501,7 @@ export default function ProductsPage() {
               </div>
             )}
 
-            {/* Pagination */}
+            {/* ── Pagination ────────────────────────────────────────── */}
             {totalPages > 1 && (
               <div className="pagination">
                 <button
@@ -401,21 +511,35 @@ export default function ProductsPage() {
                 >
                   <i className="bi bi-chevron-left" /> Prev
                 </button>
-                <div className="pagination__pages">
-                  {[...Array(Math.min(totalPages, 7))].map((_, i) => {
-                    const pg = i + 1;
-                    return (
-                      <button
-                        key={pg}
-                        className={`pagination__page${page === pg ? " pagination__page--active" : ""}`}
-                        onClick={() => setPage(pg)}
-                      >
-                        {pg}
-                      </button>
-                    );
-                  })}
-                  {totalPages > 7 && <span className="pagination__ellipsis">…</span>}
-                </div>
+
+                {pageNumbers[0] > 1 && (
+                  <>
+                    <button className="pagination__btn" onClick={() => setPage(1)}>1</button>
+                    {pageNumbers[0] > 2 && <span style={{ color: "var(--color-text-faint)" }}>…</span>}
+                  </>
+                )}
+
+                {pageNumbers.map((pg) => (
+                  <button
+                    key={pg}
+                    className={`pagination__btn${page === pg ? " is-active" : ""}`}
+                    onClick={() => setPage(pg)}
+                  >
+                    {pg}
+                  </button>
+                ))}
+
+                {pageNumbers[pageNumbers.length - 1] < totalPages && (
+                  <>
+                    {pageNumbers[pageNumbers.length - 1] < totalPages - 1 && (
+                      <span style={{ color: "var(--color-text-faint)" }}>…</span>
+                    )}
+                    <button className="pagination__btn" onClick={() => setPage(totalPages)}>
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+
                 <button
                   className="pagination__btn"
                   disabled={page === totalPages}
@@ -425,6 +549,7 @@ export default function ProductsPage() {
                 </button>
               </div>
             )}
+
           </div>
         </div>
       </div>
